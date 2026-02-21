@@ -12,7 +12,18 @@ import (
 	"github.com/benstraw/whoop-garden/internal/models"
 )
 
-const personaTemplate = `## Health Persona (30-Day Rolling Summary)
+const personaTemplate = `---
+type: context
+tags: [ai-brain/context, fitness/whoop]
+updated: {{.GeneratedDate}}
+---
+
+# WHOOP Health Persona
+
+> [!info] Auto-generated
+> Regenerate with ` + "`" + `whoop-garden persona` + "`" + `. Covers {{.PeriodStart}} → {{.PeriodEnd}}.
+
+## Health Persona (30-Day Rolling Summary)
 
 **Period:** {{.PeriodStart}} → {{.PeriodEnd}}
 
@@ -198,6 +209,7 @@ func RenderWeekly(data []fetch.DayData, tmplPath string) (string, error) {
 
 // personaData holds aggregated stats for the persona template.
 type personaData struct {
+	GeneratedDate  string
 	PeriodStart    string
 	PeriodEnd      string
 	AvgRecovery    float64
@@ -304,6 +316,7 @@ func aggregatePersonaData(data []fetch.DayData) personaData {
 	last := data[len(data)-1].Date.Format("2006-01-02")
 
 	return personaData{
+		GeneratedDate:  time.Now().Format("2006-01-02"),
 		PeriodStart:    first,
 		PeriodEnd:      last,
 		AvgRecovery:    avg(totalRecovery, recoveryCount),

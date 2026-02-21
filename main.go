@@ -318,7 +318,16 @@ func runPersona(args []string) {
 		os.Exit(1)
 	}
 
-	fmt.Println(content)
+	if vault := os.Getenv("OBSIDIAN_VAULT_PATH"); vault != "" {
+		outPath := filepath.Join(vault, "01-ai-brain", "context-packs", "WHOOP Health Persona.md")
+		if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
+			fmt.Fprintln(os.Stderr, "write error:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Written:", outPath)
+	} else {
+		fmt.Println(content)
+	}
 }
 
 func runFetchAll(args []string) {
