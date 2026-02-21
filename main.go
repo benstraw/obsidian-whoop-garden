@@ -107,6 +107,15 @@ func ensureOutputDir() (string, error) {
 	return dir, nil
 }
 
+// ensureYearDir creates a year subdirectory under baseDir if it doesn't exist.
+func ensureYearDir(baseDir string, year int) (string, error) {
+	dir := filepath.Join(baseDir, fmt.Sprintf("%d", year))
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("create year dir %s: %w", dir, err)
+	}
+	return dir, nil
+}
+
 // getClient loads tokens (refreshing if needed) and returns an API client.
 func getClient() (*client.Client, error) {
 	token, err := auth.RefreshIfNeeded()
@@ -188,7 +197,13 @@ func runDaily(args []string) {
 		os.Exit(1)
 	}
 
-	outPath := filepath.Join(dir, fmt.Sprintf("daily-%s.md", date.Format("2006-01-02")))
+	yearDir, err := ensureYearDir(dir, date.Year())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	outPath := filepath.Join(yearDir, fmt.Sprintf("daily-%s.md", date.Format("2006-01-02")))
 	if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
 		fmt.Fprintln(os.Stderr, "write error:", err)
 		os.Exit(1)
@@ -254,8 +269,14 @@ func runWeekly(args []string) {
 		os.Exit(1)
 	}
 
-	_, isoWeek := monday.ISOWeek()
-	outPath := filepath.Join(dir, fmt.Sprintf("weekly-%d-W%02d.md", monday.Year(), isoWeek))
+	isoYear, isoWeek := monday.ISOWeek()
+	yearDir, err := ensureYearDir(dir, isoYear)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	outPath := filepath.Join(yearDir, fmt.Sprintf("weekly-%d-W%02d.md", isoYear, isoWeek))
 	if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
 		fmt.Fprintln(os.Stderr, "write error:", err)
 		os.Exit(1)
@@ -341,7 +362,13 @@ func runFetchAll(args []string) {
 			continue
 		}
 
-		outPath := filepath.Join(dir, fmt.Sprintf("daily-%s.md", d.Format("2006-01-02")))
+		yearDir, err := ensureYearDir(dir, d.Year())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not create year dir for %s: %v\n", d.Format("2006-01-02"), err)
+			continue
+		}
+
+		outPath := filepath.Join(yearDir, fmt.Sprintf("daily-%s.md", d.Format("2006-01-02")))
 		if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not write %s: %v\n", outPath, err)
 			continue

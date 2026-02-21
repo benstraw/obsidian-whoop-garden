@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/benstraw/whoop-garden/internal/fetch"
 	"github.com/benstraw/whoop-garden/internal/models"
@@ -43,8 +44,34 @@ func FuncMap() template.FuncMap {
 		"strainCategory":  StrainCategory,
 		"sportName":       SportName,
 		"primarySleep":    PrimarySleep,
+		"nonNapSleeps":    NonNapSleeps,
+		"prevDay":         PrevDay,
+		"nextDay":         NextDay,
+		"isoWeek":         ISOWeekStr,
+		"prevWeek":        PrevWeekStr,
+		"nextWeek":        NextWeekStr,
+		"prevDayYear":     PrevDayYear,
+		"nextDayYear":     NextDayYear,
+		"isoWeekYear":     ISOWeekYear,
+		"prevWeekYear":    PrevWeekYear,
+		"nextWeekYear":    NextWeekYear,
 	}
 }
+
+// PrevDayYear returns the calendar year of the day before t.
+func PrevDayYear(t time.Time) int { return t.AddDate(0, 0, -1).Year() }
+
+// NextDayYear returns the calendar year of the day after t.
+func NextDayYear(t time.Time) int { return t.AddDate(0, 0, 1).Year() }
+
+// ISOWeekYear returns the ISO year for the week containing t.
+func ISOWeekYear(t time.Time) int { year, _ := t.ISOWeek(); return year }
+
+// PrevWeekYear returns the ISO year for the week before t.
+func PrevWeekYear(t time.Time) int { year, _ := t.AddDate(0, 0, -7).ISOWeek(); return year }
+
+// NextWeekYear returns the ISO year for the week after t.
+func NextWeekYear(t time.Time) int { year, _ := t.AddDate(0, 0, 7).ISOWeek(); return year }
 
 // PrimarySleep returns the longest non-nap sleep from a slice, or nil if none.
 func PrimarySleep(sleeps []models.Sleep) *models.Sleep {
@@ -60,6 +87,41 @@ func PrimarySleep(sleeps []models.Sleep) *models.Sleep {
 	}
 	return best
 }
+
+// IndexedSleep wraps a Sleep with its ordinal position among non-nap sleeps.
+type IndexedSleep struct {
+	Index int
+	Sleep models.Sleep
+}
+
+// NonNapSleeps filters to non-nap entries and attaches ordinal index.
+func NonNapSleeps(sleeps []models.Sleep) []IndexedSleep {
+	var result []IndexedSleep
+	for _, s := range sleeps {
+		if !s.Nap {
+			result = append(result, IndexedSleep{Index: len(result), Sleep: s})
+		}
+	}
+	return result
+}
+
+// PrevDay returns "YYYY-MM-DD" for the day before t.
+func PrevDay(t time.Time) string { return t.AddDate(0, 0, -1).Format("2006-01-02") }
+
+// NextDay returns "YYYY-MM-DD" for the day after t.
+func NextDay(t time.Time) string { return t.AddDate(0, 0, 1).Format("2006-01-02") }
+
+// ISOWeekStr returns "YYYY-Www" for the ISO week containing t.
+func ISOWeekStr(t time.Time) string {
+	year, week := t.ISOWeek()
+	return fmt.Sprintf("%d-W%02d", year, week)
+}
+
+// PrevWeekStr returns "YYYY-Www" for the week before t.
+func PrevWeekStr(t time.Time) string { return ISOWeekStr(t.AddDate(0, 0, -7)) }
+
+// NextWeekStr returns "YYYY-Www" for the week after t.
+func NextWeekStr(t time.Time) string { return ISOWeekStr(t.AddDate(0, 0, 7)) }
 
 // MillisToMinutes converts milliseconds to a "Xh Ym" string.
 func MillisToMinutes(ms int64) string {
