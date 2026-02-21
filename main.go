@@ -37,6 +37,8 @@ func main() {
 		runPersona(args)
 	case "fetch-all":
 		runFetchAll(args)
+	case "catch-up":
+		runCatchUp(args)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
 		printUsage()
@@ -53,6 +55,7 @@ Usage:
   whoop-garden weekly [--date DATE]  Generate weekly note for DATE's week
   whoop-garden persona [--days N]    Generate 30-day persona section
   whoop-garden fetch-all [--days N]  Fetch and write notes for last N days
+  whoop-garden catch-up [--days N]  Fetch only missing notes in last N days
 
 Flags:
   --date   Date in YYYY-MM-DD format (default: today)
@@ -357,6 +360,82 @@ func runFetchAll(args []string) {
 		dayData, err := fetch.GetDayData(c, d)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not fetch %s: %v\n", d.Format("2006-01-02"), err)
+			continue
+		}
+		if dayData.Cycle == nil {
+			fmt.Printf("Skipped: %s (no data)\n", d.Format("2006-01-02"))
+			time.Sleep(500 * time.Millisecond)
+			continue
+		}
+
+		content, err := render.RenderDaily(dayData, tmplPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not render %s: %v\n", d.Format("2006-01-02"), err)
+			continue
+		}
+
+		yearDir, err := ensureYearDir(dir, d.Year())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not create year dir for %s: %v\n", d.Format("2006-01-02"), err)
+			continue
+		}
+
+		outPath := filepath.Join(yearDir, fmt.Sprintf("daily-%s.md", d.Format("2006-01-02")))
+		if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not write %s: %v\n", outPath, err)
+			continue
+		}
+
+		fmt.Println("Written:", outPath)
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	fmt.Println("Done.")
+}
+
+func runCatchUp(args []string) {
+	fs := flag.NewFlagSet("catch-up", flag.ExitOnError)
+	days := fs.Int("days", 30, "number of days to check")
+	_ = fs.Parse(args)
+
+	dir, err := ensureOutputDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	tmplPath := filepath.Join(templatesDir(), "daily.md.tmpl")
+	end := time.Now()
+	start := end.AddDate(0, 0, -(*days))
+
+	// Collect missing dates first so we can report the plan.
+	var missing []time.Time
+	for d := start; d.Before(end); d = d.AddDate(0, 0, 1) {
+		yearDir := filepath.Join(dir, fmt.Sprintf("%d", d.Year()))
+		outPath := filepath.Join(yearDir, fmt.Sprintf("daily-%s.md", d.Format("2006-01-02")))
+		if _, err := os.Stat(outPath); os.IsNotExist(err) {
+			missing = append(missing, d)
+		}
+	}
+
+	if len(missing) == 0 {
+		fmt.Println("All caught up — no missing notes.")
+		return
+	}
+
+	fmt.Printf("Found %d missing note(s), fetching...\n", len(missing))
+
+	c, err := getClient()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	for _, d := range missing {
+		dayData, err := fetch.GetDayData(c, d)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not fetch %s: %v\n", d.Format("2006-01-02"), err)
+			time.Sleep(500 * time.Millisecond)
 			continue
 		}
 		if dayData.Cycle == nil {

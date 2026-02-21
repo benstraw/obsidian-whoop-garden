@@ -7,4 +7,4 @@ source /Users/benstrawbridge/.zprofile 2>/dev/null || true
 source /Users/benstrawbridge/.zshrc 2>/dev/null || true
 
 cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden
-exec ./whoop-garden daily
+exec ./whoop-garden catch-up --days 30
