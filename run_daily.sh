@@ -3,8 +3,8 @@
 # Shell wrapper for launchd — sources zsh profile to pick up correct PATH
 # before running whoop-garden daily.
 
-source /Users/benstrawbridge/.zprofile 2>/dev/null || true
-source /Users/benstrawbridge/.zshrc 2>/dev/null || true
+source "$HOME/.zprofile" 2>/dev/null || true
+source "$HOME/.zshrc" 2>/dev/null || true
 
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden
+cd "$(dirname "$0")"
 exec ./whoop-garden catch-up --days 30
