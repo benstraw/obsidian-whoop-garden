@@ -12,8 +12,9 @@ No external dependencies. stdlib only.
 
 ### 1. Register a WHOOP app
 
-Go to [developer.whoop.com](https://developer.whoop.com), create an app, and
-set the redirect URI to `http://localhost:3000/callback`.
+Go to [developer.whoop.com](https://developer.whoop.com) and create an app —
+it's free and takes about two minutes. Set the redirect URI to
+`http://localhost:3000/callback`.
 
 ### 2. Configure environment
 
