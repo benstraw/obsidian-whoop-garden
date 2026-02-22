@@ -46,6 +46,19 @@ func StartAuthFlow() error {
 	clientID := os.Getenv("WHOOP_CLIENT_ID")
 	redirectURI := os.Getenv("WHOOP_REDIRECT_URI")
 
+	if clientID == "" || os.Getenv("WHOOP_CLIENT_SECRET") == "" {
+		return fmt.Errorf(`WHOOP API credentials are not configured.
+
+Create a .env file in the same directory as the binary with:
+
+  WHOOP_CLIENT_ID=your_client_id
+  WHOOP_CLIENT_SECRET=your_client_secret
+  WHOOP_REDIRECT_URI=http://localhost:3000/callback
+
+You can obtain free credentials by creating an app at:
+  https://developer.whoop.com/`)
+	}
+
 	state, err := randomState()
 	if err != nil {
 		return fmt.Errorf("failed to generate state: %w", err)
