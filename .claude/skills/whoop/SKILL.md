@@ -8,13 +8,12 @@ description: Pull WHOOP fitness data and generate health summary pages for the d
 Fetches data from the WHOOP v2 API via the `whoop-garden` Go CLI and generates
 structured markdown files for the Obsidian digital garden.
 
-**Project directory:** `/Volumes/wanderer/dev/solo/obsidian-whoop-garden/`
-All CLI commands must be run from that directory.
+**Project directory:** Set `$WHOOP_GARDEN_DIR` in your environment, or `cd` to the project root before running commands. All CLI commands must be run from the project directory.
 
 ## Quick Reference
 
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden
+cd "$WHOOP_GARDEN_DIR"
 
 go run . auth                        # one-time OAuth (or after token expiry)
 go run . daily                       # today's daily note
@@ -194,25 +193,25 @@ Never make up or estimate WHOOP scores. Always fetch real data or read from vaul
 
 ### "Update my health page / run daily"
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden && go run . daily
+cd "$WHOOP_GARDEN_DIR" && go run . daily
 ```
 Read the output file and summarize key insights.
 
 ### "How was my recovery this week"
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden && go run . weekly
+cd "$WHOOP_GARDEN_DIR" && go run . weekly
 ```
 Report avg recovery, HRV trend, best/worst day, notable patterns.
 
 ### "Update my persona"
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden && go run . persona
+cd "$WHOOP_GARDEN_DIR" && go run . persona
 ```
 Output goes to stdout. Ask user if they want it written to their persona note or review first.
 
 ### "Backfill my vault"
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden && go run . fetch-all --days 90
+cd "$WHOOP_GARDEN_DIR" && go run . fetch-all --days 90
 ```
 Generates up to 90 daily notes with a 500ms throttle between days. Skips dates with
 no WHOOP cycle data (e.g., days before the user got their device).
@@ -227,7 +226,7 @@ Report specific contributing factors, not just "your score was low".
 
 ### Auth errors / token expired
 ```bash
-cd /Volumes/wanderer/dev/solo/obsidian-whoop-garden && go run . auth
+cd "$WHOOP_GARDEN_DIR" && go run . auth
 ```
 Browser opens to WHOOP's auth page. After approving, callback is captured on :3000
 and new tokens saved to `tokens.json`.
