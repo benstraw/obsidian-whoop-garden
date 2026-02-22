@@ -15,6 +15,9 @@ import (
 	"github.com/benstraw/whoop-garden/internal/render"
 )
 
+// version is set at build time via -ldflags "-X main.version=vX.Y.Z".
+var version = "dev"
+
 func main() {
 	loadDotEnv(".env")
 
@@ -27,6 +30,10 @@ func main() {
 	args := os.Args[2:]
 
 	switch cmd {
+	case "version", "--version", "-v":
+		fmt.Println("whoop-garden", version)
+	case "help", "--help", "-h":
+		printUsage()
 	case "auth":
 		runAuth()
 	case "daily":
@@ -47,7 +54,7 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Print(`whoop-garden — WHOOP data → Obsidian markdown
+	fmt.Printf(`whoop-garden %s — WHOOP data → Obsidian markdown
 
 Usage:
   whoop-garden auth                  Authenticate with WHOOP via OAuth
@@ -55,12 +62,14 @@ Usage:
   whoop-garden weekly [--date DATE]  Generate weekly note for DATE's week
   whoop-garden persona [--days N]    Generate 30-day persona section
   whoop-garden fetch-all [--days N]  Fetch and write notes for last N days
-  whoop-garden catch-up [--days N]  Fetch only missing notes in last N days
+  whoop-garden catch-up [--days N]   Fetch only missing notes in last N days
+  whoop-garden version               Print version and exit
+  whoop-garden help                  Show this help
 
 Flags:
   --date   Date in YYYY-MM-DD format (default: today)
   --days   Number of days (default: 30)
-`)
+`, version)
 }
 
 // loadDotEnv reads a .env file and sets environment variables.
