@@ -31,6 +31,15 @@ func NewClient(token string) *Client {
 	}
 }
 
+// NewClientWithBaseURL creates a Client with a custom base URL. Intended for tests.
+func NewClientWithBaseURL(token, baseURL string) *Client {
+	return &Client{
+		accessToken: token,
+		baseURL:     baseURL,
+		httpClient:  &http.Client{Timeout: 5 * time.Second},
+	}
+}
+
 // Get performs a GET request to the WHOOP API.
 // It retries on HTTP 429 with exponential backoff (1s, 2s, 4s).
 func (c *Client) Get(path string, params url.Values) ([]byte, error) {

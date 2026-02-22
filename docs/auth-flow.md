@@ -23,35 +23,35 @@ User                  CLI                    WHOOP API         Browser
  |                     |<-- access_token,        |                |
  |                     |    refresh_token        |                |
  |                     |                         |                |
- |                     | save tokens.json        |                |
+ |                     | save tokens.json (0600) |                |
  |                     |                         |                |
 ```
 
-## Environment Variables Required
+## Required Environment Variables
 
 | Variable | Description |
 |---|---|
-| `WHOOP_CLIENT_ID` | OAuth app client ID from WHOOP developer portal |
+| `WHOOP_CLIENT_ID` | OAuth app client ID from developer.whoop.com |
 | `WHOOP_CLIENT_SECRET` | OAuth app client secret |
-| `WHOOP_REDIRECT_URI` | Must be `http://localhost:3000/callback` |
+| `WHOOP_REDIRECT_URI` | Must match `http://localhost:3000/callback` exactly |
 
 ## Scopes Requested
 
-- `offline` — allows refresh tokens
-- `read:profile` — user profile data
-- `read:body_measurement` — height, weight, max HR
-- `read:cycles` — physiological cycles (day strain)
-- `read:recovery` — recovery scores, HRV, RHR
-- `read:sleep` — sleep stages and scoring
-- `read:workout` — workout activity data
+| Scope | Data |
+|---|---|
+| `offline` | Allows refresh tokens |
+| `read:profile` | User profile (name, email) |
+| `read:body_measurement` | Height, weight, max heart rate |
+| `read:cycles` | Physiological cycles (day strain) |
+| `read:recovery` | Recovery score, HRV, RHR, SpO2, skin temp |
+| `read:sleep` | Sleep stages, performance, consistency |
+| `read:workout` | Workout activity, heart rate zones |
 
 ## Token Storage
 
-Tokens are stored in `tokens.json` in the working directory with `0600`
-permissions (owner read/write only). The file is excluded from git via
-`.gitignore`.
+Tokens are written to `tokens.json` in the current working directory with
+`0600` permissions (owner read/write only). The file is excluded from git.
 
-Structure:
 ```json
 {
   "access_token": "...",
@@ -63,36 +63,38 @@ Structure:
 }
 ```
 
-## Token Refresh
+`expires_at` is computed at save time as `now + expires_in` and persisted so
+subsequent runs can check expiry without calling the API.
 
-On each command, `RefreshIfNeeded()` is called:
+## Automatic Token Refresh
+
+Every command calls `auth.RefreshIfNeeded()` before making API calls:
+
 1. Load `tokens.json`
-2. Check if `expires_at` is within 5 minutes
-3. If expiring soon, POST to token endpoint with `grant_type=refresh_token`
-4. Save new tokens to `tokens.json`
+2. Check if `expires_at` is within 5 minutes of now
+3. If expiring soon: POST to token endpoint with `grant_type=refresh_token`
+4. Save new tokens back to `tokens.json`
+5. Return the valid access token
 
-## Testing the Auth Flow
-
-1. Ensure your `.env` is configured with valid credentials
-2. Run: `go run . auth`
-3. Browser opens to WHOOP authorization page
-4. Log in and approve scopes
-5. Browser redirects to `http://localhost:3000/callback`
-6. CLI captures the code and exchanges for tokens
-7. `tokens.json` is created in current directory
-8. Run `go run . daily` to verify API access works
+You should only need to run `whoop-garden auth` once. The refresh token is
+long-lived; tokens auto-renew as long as you run a command at least once per
+refresh token lifetime.
 
 ## Troubleshooting
 
-**"no code in callback"** — The WHOOP redirect may have included an error
-parameter. Check the URL shown in the browser.
+**"no code in callback"** — The WHOOP redirect included an error parameter.
+Check the browser URL bar for an `error=` query parameter and its description.
 
-**"token endpoint returned 401"** — Client ID or secret may be wrong, or
-the authorization code has expired (codes expire quickly — complete auth
-in one session).
+**"token endpoint returned 401"** — Client ID or secret is wrong, or the
+authorization code expired. Authorization codes are single-use and
+short-lived — complete the flow in one browser session without navigating away.
 
-**Browser doesn't open** — The CLI falls back to printing the URL. Copy
-and paste it into a browser manually.
+**Browser doesn't open** — The CLI falls back to printing the full auth URL.
+Copy and paste it into a browser to continue.
 
-**Port 3000 already in use** — Stop whatever is using port 3000 before
-running `auth`.
+**Port 3000 already in use** — The callback server cannot start. Stop whatever
+is using port 3000 and retry. Common culprits: local dev servers, other OAuth
+tools.
+
+**tokens.json not found** — Run `go run . auth` first. The file must exist in
+the working directory where you run commands.

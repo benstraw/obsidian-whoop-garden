@@ -6,7 +6,9 @@ rolling 30-day health persona section.
 
 No external dependencies. stdlib only.
 
-## Setup
+---
+
+## Quick Start
 
 ### 1. Register a WHOOP app
 
@@ -16,21 +18,17 @@ set the redirect URI to `http://localhost:3000/callback`.
 ### 2. Configure environment
 
 ```bash
-cp .env.example .env   # then fill in your values
+cp .env.example .env
 ```
 
-`.env`:
 ```
 WHOOP_CLIENT_ID=your_client_id
 WHOOP_CLIENT_SECRET=your_client_secret
 WHOOP_REDIRECT_URI=http://localhost:3000/callback
 
-# Optional — route output directly to your vault
-OBSIDIAN_VAULT_PATH=/path/to/your/obsidian/vault
+# Optional
+OBSIDIAN_VAULT_PATH=/path/to/your/vault
 ```
-
-If `OBSIDIAN_VAULT_PATH` is set, files are written to `Health/WHOOP/` inside
-your vault. Otherwise they go to `./output/`.
 
 ### 3. Authenticate
 
@@ -38,82 +36,60 @@ your vault. Otherwise they go to `./output/`.
 go run . auth
 ```
 
-Opens a browser to WHOOP's OAuth page. After approving, tokens are saved to
-`tokens.json` automatically. Tokens auto-refresh — you should only need to do
-this once.
+Opens a browser to WHOOP's OAuth page. Tokens are saved to `tokens.json` and
+auto-refresh — you should only need to do this once.
 
-## Usage
-
-```bash
-# Daily note for today
-go run . daily
-
-# Daily note for a specific date
-go run . daily --date 2026-02-19
-
-# Weekly summary (Mon–Sun of the current week)
-go run . weekly
-
-# Weekly summary for the week containing a given date
-go run . weekly --date 2026-02-17
-
-# 30-day persona section → stdout (paste into your health persona note)
-go run . persona
-
-# Custom window
-go run . persona --days 60
-
-# Backfill N days of daily notes
-go run . fetch-all --days 90
-```
-
-## Build
+### 4. Generate notes
 
 ```bash
-go build ./...                          # compile
-go build -o bin/whoop-garden .          # produce binary
-go vet ./...                            # static analysis
+go run . daily                       # today's note
+go run . daily --date 2026-02-19     # specific date
+go run . weekly                      # this week's summary
+go run . catch-up --days 30          # backfill only missing notes
+go run . persona                     # 30-day rolling health summary
 ```
 
-## Architecture
+---
 
-Thin pipeline: **fetch → model → render → write**
+## Build & Test
 
-```
-main.go
-  └─ loads .env, dispatches subcommand
-       ├─ internal/auth/auth.go      OAuth2 flow + token lifecycle
-       ├─ internal/client/client.go  Authenticated HTTP GET, 429 retry
-       ├─ internal/fetch/fetch.go    Paginated API calls → DayData aggregate
-       ├─ internal/models/models.go  WHOOP v2 JSON structs + SPORT_NAMES map
-       └─ internal/render/render.go  text/template rendering + helpers
+```bash
+go build ./...                        # compile
+go build -o bin/whoop-garden .        # produce binary
+go vet ./...                          # static analysis
+go test ./...                         # run all tests
+go test ./... -short                  # skip slow tests (~3s sleep)
 ```
 
-**Data flow for `daily`:**
-1. `auth.RefreshIfNeeded()` — load/refresh `tokens.json`
-2. `client.NewClient(token)` — wrap token
-3. `fetch.GetDayData(c, date)` — concurrent goroutines fetch cycle, recovery, sleeps, workouts
-4. `render.RenderDaily(data, tmplPath)` — execute `templates/daily.md.tmpl`
-5. Write file to output directory
+---
 
-## Templates
+## Output
 
-Templates live in `templates/` and are loaded from disk at runtime. Override
-location with `WHOOP_TEMPLATES_DIR` env var.
-
-Available template helpers: `millisToMinutes`, `recoveryColor`, `strainCategory`,
-`sportName`, `primarySleep`
-
-## Output Files
+Files are written to `$OBSIDIAN_VAULT_PATH/Health/WHOOP/<year>/` when the
+vault path is set, otherwise `./output/<year>/`.
 
 | Command | Filename |
 |---|---|
 | `daily` | `daily-2026-02-20.md` |
 | `weekly` | `weekly-2026-W08.md` |
+| `persona` | `<vault>/01-ai-brain/context-packs/WHOOP Health Persona.md` |
+
+---
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [docs/commands.md](docs/commands.md) | All commands, flags, and behaviour details |
+| [docs/architecture.md](docs/architecture.md) | Package map, data flow, design decisions |
+| [docs/templates.md](docs/templates.md) | Template system, all helpers, data structures, customisation |
+| [docs/auth-flow.md](docs/auth-flow.md) | OAuth flow, token storage, refresh, troubleshooting |
+| [docs/testing.md](docs/testing.md) | Running tests, coverage by package, known gaps, adding new tests |
+
+---
 
 ## Notes
 
-- `fetch-all` skips dates with no WHOOP cycle data and throttles 500ms between
-  days to stay within API rate limits
-- `persona` outputs to stdout — pipe or copy into your health persona note
-- `tokens.json` and `.env` are gitignored; never commit them
+- `tokens.json` and `.env` are gitignored — never commit them
+- `catch-up` skips existing files; `fetch-all` overwrites them
+- Port `3000` must be free when running `auth`
