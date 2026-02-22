@@ -222,8 +222,5 @@ var SPORT_NAMES = map[int]string{
 	99:  "Spin",
 	100: "Jiu Jitsu",
 	101: "Manual Labor",
-	102: "Cricket",
 	103: "Archery",
-	104: "Softball",
-	105: "Volleyball",
 }

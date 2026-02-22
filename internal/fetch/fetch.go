@@ -48,11 +48,12 @@ func GetBodyMeasurements(c *client.Client) (*models.BodyMeasurements, error) {
 	return &m, nil
 }
 
-// GetCycles fetches all cycles whose start falls in [start, end) with pagination.
-func GetCycles(c *client.Client, start, end time.Time) ([]models.Cycle, error) {
-	var all []models.Cycle
+// fetchPaginated retrieves all records from a WHOOP paginated endpoint.
+// A 404 response is treated as an empty result set (WHOOP returns 404 when no
+// records exist in the requested time range).
+func fetchPaginated[T any](c *client.Client, path string, start, end time.Time) ([]T, error) {
+	var all []T
 	nextToken := ""
-
 	for {
 		params := url.Values{}
 		params.Set("start", start.UTC().Format(time.RFC3339))
@@ -60,140 +61,44 @@ func GetCycles(c *client.Client, start, end time.Time) ([]models.Cycle, error) {
 		if nextToken != "" {
 			params.Set("nextToken", nextToken)
 		}
-
-		body, err := c.Get("/cycle", params)
+		body, err := c.Get(path, params)
 		if err != nil {
 			if errors.Is(err, client.ErrNotFound) {
 				return all, nil
 			}
-			return nil, fmt.Errorf("get cycles: %w", err)
+			return nil, fmt.Errorf("get %s: %w", path, err)
 		}
-
-		var page models.PaginatedResponse[models.Cycle]
+		var page models.PaginatedResponse[T]
 		if err := json.Unmarshal(body, &page); err != nil {
-			return nil, fmt.Errorf("parse cycles: %w", err)
+			return nil, fmt.Errorf("parse %s: %w", path, err)
 		}
-
 		all = append(all, page.Records...)
-
 		if page.NextToken == "" {
 			break
 		}
 		nextToken = page.NextToken
 	}
-
 	return all, nil
+}
+
+// GetCycles fetches all cycles whose start falls in [start, end).
+func GetCycles(c *client.Client, start, end time.Time) ([]models.Cycle, error) {
+	return fetchPaginated[models.Cycle](c, "/cycle", start, end)
 }
 
 // GetRecoveries fetches all recovery records whose created_at falls in [start, end).
 func GetRecoveries(c *client.Client, start, end time.Time) ([]models.Recovery, error) {
-	var all []models.Recovery
-	nextToken := ""
-
-	for {
-		params := url.Values{}
-		params.Set("start", start.UTC().Format(time.RFC3339))
-		params.Set("end", end.UTC().Format(time.RFC3339))
-		if nextToken != "" {
-			params.Set("nextToken", nextToken)
-		}
-
-		body, err := c.Get("/recovery", params)
-		if err != nil {
-			if errors.Is(err, client.ErrNotFound) {
-				return all, nil
-			}
-			return nil, fmt.Errorf("get recoveries: %w", err)
-		}
-
-		var page models.PaginatedResponse[models.Recovery]
-		if err := json.Unmarshal(body, &page); err != nil {
-			return nil, fmt.Errorf("parse recoveries: %w", err)
-		}
-
-		all = append(all, page.Records...)
-
-		if page.NextToken == "" {
-			break
-		}
-		nextToken = page.NextToken
-	}
-
-	return all, nil
+	return fetchPaginated[models.Recovery](c, "/recovery", start, end)
 }
 
 // GetSleeps fetches all sleep records whose start falls in [start, end).
 func GetSleeps(c *client.Client, start, end time.Time) ([]models.Sleep, error) {
-	var all []models.Sleep
-	nextToken := ""
-
-	for {
-		params := url.Values{}
-		params.Set("start", start.UTC().Format(time.RFC3339))
-		params.Set("end", end.UTC().Format(time.RFC3339))
-		if nextToken != "" {
-			params.Set("nextToken", nextToken)
-		}
-
-		body, err := c.Get("/activity/sleep", params)
-		if err != nil {
-			if errors.Is(err, client.ErrNotFound) {
-				return all, nil
-			}
-			return nil, fmt.Errorf("get sleeps: %w", err)
-		}
-
-		var page models.PaginatedResponse[models.Sleep]
-		if err := json.Unmarshal(body, &page); err != nil {
-			return nil, fmt.Errorf("parse sleeps: %w", err)
-		}
-
-		all = append(all, page.Records...)
-
-		if page.NextToken == "" {
-			break
-		}
-		nextToken = page.NextToken
-	}
-
-	return all, nil
+	return fetchPaginated[models.Sleep](c, "/activity/sleep", start, end)
 }
 
 // GetWorkouts fetches all workout records whose start falls in [start, end).
 func GetWorkouts(c *client.Client, start, end time.Time) ([]models.Workout, error) {
-	var all []models.Workout
-	nextToken := ""
-
-	for {
-		params := url.Values{}
-		params.Set("start", start.UTC().Format(time.RFC3339))
-		params.Set("end", end.UTC().Format(time.RFC3339))
-		if nextToken != "" {
-			params.Set("nextToken", nextToken)
-		}
-
-		body, err := c.Get("/activity/workout", params)
-		if err != nil {
-			if errors.Is(err, client.ErrNotFound) {
-				return all, nil
-			}
-			return nil, fmt.Errorf("get workouts: %w", err)
-		}
-
-		var page models.PaginatedResponse[models.Workout]
-		if err := json.Unmarshal(body, &page); err != nil {
-			return nil, fmt.Errorf("parse workouts: %w", err)
-		}
-
-		all = append(all, page.Records...)
-
-		if page.NextToken == "" {
-			break
-		}
-		nextToken = page.NextToken
-	}
-
-	return all, nil
+	return fetchPaginated[models.Workout](c, "/activity/workout", start, end)
 }
 
 // GetDayData fetches and aggregates all WHOOP data for a given calendar date.

@@ -47,6 +47,14 @@ updated: {{.GeneratedDate}}
 - Red (0–33): {{.RedDays}} days
 `
 
+// avg returns total/count, or 0 when count is zero.
+func avg(total float64, count int) float64 {
+	if count == 0 {
+		return 0
+	}
+	return total / float64(count)
+}
+
 // FuncMap returns the template helper functions.
 func FuncMap() template.FuncMap {
 	return template.FuncMap{
@@ -194,19 +202,6 @@ func RenderDaily(data fetch.DayData, tmplPath string) (string, error) {
 	return buf.String(), nil
 }
 
-// RenderWeekly renders a weekly markdown note from a file template.
-func RenderWeekly(data []fetch.DayData, tmplPath string) (string, error) {
-	tmpl, err := template.New("weekly").Funcs(FuncMap()).ParseFiles(tmplPath)
-	if err != nil {
-		return "", fmt.Errorf("parse weekly template: %w", err)
-	}
-	var buf bytes.Buffer
-	if err := tmpl.ExecuteTemplate(&buf, "weekly.md.tmpl", data); err != nil {
-		return "", fmt.Errorf("render weekly template: %w", err)
-	}
-	return buf.String(), nil
-}
-
 // personaData holds aggregated stats for the persona template.
 type personaData struct {
 	GeneratedDate  string
@@ -299,17 +294,9 @@ func aggregatePersonaData(data []fetch.DayData) personaData {
 		totalWorkouts += len(d.Workouts)
 	}
 
-	avg := func(total float64, count int) float64 {
-		if count == 0 {
-			return 0
-		}
-		return total / float64(count)
-	}
-	avgI := func(total int64, count int) int64 {
-		if count == 0 {
-			return 0
-		}
-		return total / int64(count)
+	var avgSleepMs int64
+	if sleepCount > 0 {
+		avgSleepMs = totalSleepMillis / int64(sleepCount)
 	}
 
 	first := data[0].Date.Format("2006-01-02")
@@ -323,7 +310,7 @@ func aggregatePersonaData(data []fetch.DayData) personaData {
 		AvgHRV:         avg(totalHRV, recoveryCount),
 		HRVTrend:       hrvTrendLabel(hrvValues),
 		AvgRHR:         avg(totalRHR, recoveryCount),
-		AvgSleepMillis: avgI(totalSleepMillis, sleepCount),
+		AvgSleepMillis: avgSleepMs,
 		AvgSleepPerf:   avg(totalSleepPerf, sleepCount),
 		AvgStrain:      avg(totalStrain, cycleCount),
 		TotalWorkouts:  totalWorkouts,
@@ -382,7 +369,7 @@ type WeekStats struct {
 	AvgHRV        float64
 	AvgRHR        float64
 	AvgStrain     float64
-	AvgSleepStr   string
+	AvgSleepMillis int64
 	GreenDays     int
 	YellowDays    int
 	RedDays       int
@@ -450,21 +437,13 @@ func BuildWeekStats(days []fetch.DayData) WeekStats {
 		}
 	}
 
-	avg := func(t float64, c int) float64 {
-		if c == 0 {
-			return 0
-		}
-		return t / float64(c)
-	}
 	ws.AvgRecovery = avg(totalRec, recCount)
 	ws.AvgHRV = avg(totalHRV, recCount)
 	ws.AvgRHR = avg(totalRHR, recCount)
 	ws.AvgStrain = avg(totalStrain, strainCount)
-	var avgSleepMs int64
 	if sleepCount > 0 {
-		avgSleepMs = totalSleepMs / int64(sleepCount)
+		ws.AvgSleepMillis = totalSleepMs / int64(sleepCount)
 	}
-	ws.AvgSleepStr = MillisToMinutes(avgSleepMs)
 
 	return ws
 }

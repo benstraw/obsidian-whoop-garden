@@ -315,8 +315,8 @@ func TestBuildWeekStats_BasicAggregation(t *testing.T) {
 	if ws.TotalWorkouts != 2 {
 		t.Errorf("TotalWorkouts = %d, want 2", ws.TotalWorkouts)
 	}
-	if ws.AvgSleepStr != "7h 30m" {
-		t.Errorf("AvgSleepStr = %q, want \"7h 30m\"", ws.AvgSleepStr)
+	if ws.AvgSleepMillis != 27_000_000 {
+		t.Errorf("AvgSleepMillis = %d, want 27_000_000 (7h 30m)", ws.AvgSleepMillis)
 	}
 	if ws.BestDay == nil || ws.BestDay.Recovery.Score.RecoveryScore != 80 {
 		t.Error("BestDay should have recovery score 80")
@@ -357,8 +357,8 @@ func TestBuildWeekStats_NapsExcludedFromSleep(t *testing.T) {
 		},
 	}
 	ws := BuildWeekStats(days)
-	if ws.AvgSleepStr != "8h 0m" {
-		t.Errorf("AvgSleepStr = %q, nap should be excluded", ws.AvgSleepStr)
+	if ws.AvgSleepMillis != 28_800_000 {
+		t.Errorf("AvgSleepMillis = %d, want 28_800_000 (8h), nap should be excluded", ws.AvgSleepMillis)
 	}
 }
 

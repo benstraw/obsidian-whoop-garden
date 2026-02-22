@@ -22,7 +22,7 @@ created: {{$s.WeekStart}}
 | Avg HRV | {{printf "%.1f" $s.AvgHRV}} ms |
 | Avg RHR | {{printf "%.0f" $s.AvgRHR}} bpm |
 | Avg Strain | {{printf "%.1f" $s.AvgStrain}} |
-| Avg Sleep | {{$s.AvgSleepStr}} |
+| Avg Sleep | {{millisToMinutes $s.AvgSleepMillis}} |
 | Total Workouts | {{$s.TotalWorkouts}} |
 
 ---
